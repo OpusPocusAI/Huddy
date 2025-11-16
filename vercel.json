@@ -3,7 +3,18 @@
   "outputDirectory": "build",
   "framework": null,
   "installCommand": "npm ci --legacy-peer-deps",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "GENERATE_SOURCEMAP": "false",
+    "INLINE_RUNTIME_CHUNK": "false"
   }
 }
