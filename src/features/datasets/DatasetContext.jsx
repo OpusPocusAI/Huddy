@@ -3,7 +3,7 @@ import { datasetsApi } from './api';
 import eventBus from '../../shared/events/eventBus';
 import { Events } from '../../shared/events/contracts';
 
-const DatasetContext = createContext(null);
+export const DatasetContext = createContext(null);
 
 export function DatasetProvider({ children }) {
   const [available, setAvailable] = useState([]);
