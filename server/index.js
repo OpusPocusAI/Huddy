@@ -1097,8 +1097,52 @@ app.post('/api/chat', authMiddleware, async (req, res) => {
         messages = conv.messages.map(m => ({ role: m.sender, content: m.text }));
       }
     }
+    // Prepend system message with available datasets and instructions
+    const availableDatasets = STATIC_DATASETS.concat(db.get('datasets').value() || []);
+    const datasetList = availableDatasets.map(d => `- ${d.id}: ${d.title}`).join('\n');
+    const systemMessage = {
+      role: 'system',
+      content: `You are a data visualization assistant for a 3D globe application. You can help users explore and visualize global datasets.
+
+Available datasets:
+${datasetList}
+
+Your capabilities:
+1. Search OWID knowledge base for datasets using search_knowledge_base
+2. List available datasets using list_datasets
+3. Show datasets on the 3D globe using show_dataset (requires exact dataset ID)
+4. Plot datasets as graphs using plot_dataset
+5. Create new dataset definitions using define_dataset (if user requests data not in the list)
+
+When a user asks for data:
+- If you recognize it in the available datasets, use show_dataset or plot_dataset directly
+- If it's not in the list, use search_knowledge_base to find OWID data, then suggest using define_dataset to add it
+- For general questions about data topics, use search_knowledge_base
+- Be proactive: if a user mentions a topic (e.g., "GDP", "education", "health"), offer to visualize relevant datasets
+
+Always provide clear, concise responses and explain what you're showing on the globe.`
+    };
+
+    // Insert system message at the beginning if not already present
+    if (messages.length === 0 || messages[0].role !== 'system') {
+      messages.unshift(systemMessage);
+    }
+
     // Append the current user message
     messages.push({ role: 'user', content: prompt });
+
+    // List datasets tool
+    const listDatasetsTool = {
+      type: 'function',
+      name: 'list_datasets',
+      description: 'List all available datasets that can be visualized on the globe or in graphs.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false
+      }
+    };
+
     // Knowledge-base search tool
     const searchTool = {
       type: 'function',
@@ -1183,15 +1227,36 @@ app.post('/api/chat', authMiddleware, async (req, res) => {
     const resp = await openai.chat.completions.create({
       model: chatModel,
       messages: messages,
-      functions: [searchTool, plotTool, showTool, defineTool],
+      functions: [listDatasetsTool, searchTool, plotTool, showTool, defineTool],
       function_call: 'auto'
     });
     // Extract reply / function‑call information
     const replyChoice = resp.choices?.[0] || {};
     const replyMessage = replyChoice.message || {};
     let reply = replyMessage.content || '';
+
+    // Handle list_datasets function call
+    if (replyMessage.function_call && replyMessage.function_call.name === 'list_datasets') {
+      const datasetsList = availableDatasets.map(d => ({
+        id: d.id,
+        title: d.title,
+        description: d.description || '',
+        views: d.supportedViews || []
+      }));
+      // Provide the list back to the model so it can craft a response
+      const followResp = await openai.chat.completions.create({
+        model: chatModel,
+        messages: [
+          ...messages,
+          { role: 'assistant', function_call: replyMessage.function_call },
+          { role: 'function', name: 'list_datasets', content: JSON.stringify(datasetsList) }
+        ]
+      });
+      const followChoice = followResp.choices?.[0] || {};
+      reply = followChoice.message?.content || 'Available datasets listed above.';
+    }
     // If the model decided to call our show-on-globe tool, emit a globe directive
-    if (replyMessage.function_call && replyMessage.function_call.name === 'show_dataset') {
+    else if (replyMessage.function_call && replyMessage.function_call.name === 'show_dataset') {
       try {
         const args = JSON.parse(replyMessage.function_call.arguments || '{}');
         reply = '__GLOBE__' + JSON.stringify({ id: args.id });

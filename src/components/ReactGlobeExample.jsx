@@ -292,23 +292,34 @@ function ReactGlobeExampleInner() {
         try {
           const directive = JSON.parse(jsonStr);
           // Show dataset on globe
-          handleDatasetSelect(directive.id, 'globe');
-          aiContent = `I've displayed the ${directive.id} dataset on the globe for you.`;
+          try {
+            handleDatasetSelect(directive.id, 'globe');
+            aiContent = `I've displayed the ${directive.id} dataset on the globe for you.`;
+          } catch (selectErr) {
+            console.error('Failed to load dataset on globe:', selectErr);
+            // If dataset doesn't exist, suggest alternatives
+            aiContent = `I tried to show "${directive.id}" on the globe, but it's not currently loaded. You can:\n- Ask me to search for similar datasets\n- Try the Dataset Search panel on the left\n- Request a different dataset from the available list`;
+          }
         } catch (err) {
           console.error('Failed to parse globe directive:', err);
-          aiContent = 'I tried to show data on the globe, but encountered an error.';
+          aiContent = 'I tried to show data on the globe, but encountered an error parsing the request.';
         }
       } else if (aiContent.startsWith('__PLOT__')) {
         const jsonStr = aiContent.substring(8); // Remove '__PLOT__' prefix
         try {
           const directive = JSON.parse(jsonStr);
           // Show dataset as graph
-          handleDatasetSelect(directive.id, 'graph');
-          if (directive.defaultRegion) setSelectedRegion(directive.defaultRegion);
-          aiContent = `I've plotted the ${directive.id} dataset for you.`;
+          try {
+            handleDatasetSelect(directive.id, 'graph');
+            if (directive.defaultRegion) setSelectedRegion(directive.defaultRegion);
+            aiContent = `I've plotted the ${directive.id} dataset for you.`;
+          } catch (selectErr) {
+            console.error('Failed to load dataset on graph:', selectErr);
+            aiContent = `I tried to plot "${directive.id}", but it's not currently loaded. Please use the Dataset Search to find it, or ask me to search for similar datasets.`;
+          }
         } catch (err) {
           console.error('Failed to parse plot directive:', err);
-          aiContent = 'I tried to show a graph, but encountered an error.';
+          aiContent = 'I tried to show a graph, but encountered an error parsing the request.';
         }
       }
 
