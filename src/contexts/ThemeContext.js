@@ -52,7 +52,7 @@ const themes = {
   }
 };
 
-const ThemeContext = createContext();
+export const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [currentTheme, setCurrentTheme] = useState('default');
