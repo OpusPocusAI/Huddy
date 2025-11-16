@@ -9,13 +9,13 @@ import Main from './components/Main';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-const Settings = React.lazy(() => import('./pages/Settings'));
-const IdeologramPage = React.lazy(() => import('./pages/IdeologramPage'));
-const AvatarRigPage = React.lazy(() => import('./pages/AvatarRigPage'));
+import Settings from './pages/Settings';
+import IdeologramPage from './pages/IdeologramPage';
+import AvatarRigPage from './pages/AvatarRigPage';
 import VoiceDevWidget from './features/voice/VoiceDevWidget';
 import createMcpClient from './shared/agents/mcpClient';
 import AvatarDevWidget from './features/voice/AvatarDevWidget';
-const AsciiGlobePage = React.lazy(() => import('./pages/AsciiGlobePage'));
+import AsciiGlobePage from './pages/AsciiGlobePage';
 import TranscribeDevView from './features/voice/TranscribeDevView';
 import VoiceButtons from './features/voice/VoiceButtons';
 import RealtimeCaptionOverlay from './features/voice/RealtimeCaptionOverlay';
@@ -54,7 +54,6 @@ function App() {
           <BrowserRouter>
             {/* Removed global Navbar; sidebar menu icons are used instead */}
             <ErrorBoundary>
-              <React.Suspense fallback={<div className="p-4 text-gray-400">Loading…</div>}>
               <Routes>
                 {/* Public home (globe) view */}
                 <Route
@@ -104,7 +103,6 @@ function App() {
                 }
               />
               </Routes>
-              </React.Suspense>
             </ErrorBoundary>
           </BrowserRouter>
           {process.env.REACT_APP_VOICE_DEV_WIDGET === '1' && <VoiceDevWidget />}
