@@ -1108,17 +1108,15 @@ Available datasets:
 ${datasetList}
 
 Your capabilities:
-1. Search OWID knowledge base for datasets using search_knowledge_base
-2. List available datasets using list_datasets
-3. Show datasets on the 3D globe using show_dataset (requires exact dataset ID)
-4. Plot datasets as graphs using plot_dataset
-5. Create new dataset definitions using define_dataset (if user requests data not in the list)
+1. List available datasets using list_datasets
+2. Show datasets on the 3D globe using show_dataset (requires exact dataset ID)
+3. Plot datasets as graphs using plot_dataset
+4. Create new dataset definitions using define_dataset (if user requests data not in the list)
 
 When a user asks for data:
 - If you recognize it in the available datasets, use show_dataset or plot_dataset directly
-- If it's not in the list, use search_knowledge_base to find OWID data, then suggest using define_dataset to add it
-- For general questions about data topics, use search_knowledge_base
-- Be proactive: if a user mentions a topic (e.g., "GDP", "education", "health"), offer to visualize relevant datasets
+- If it's not in the list, inform the user that they can search for World Bank indicators using the Dataset Search panel
+- Be proactive: if a user mentions a topic (e.g., "GDP", "education", "health"), offer to visualize relevant datasets from the available list
 
 Always provide clear, concise responses and explain what you're showing on the globe.`
     };
@@ -1227,7 +1225,7 @@ Always provide clear, concise responses and explain what you're showing on the g
     const resp = await openai.chat.completions.create({
       model: chatModel,
       messages: messages,
-      functions: [listDatasetsTool, searchTool, plotTool, showTool, defineTool],
+      functions: [listDatasetsTool, plotTool, showTool, defineTool],
       function_call: 'auto'
     });
     // Extract reply / function‑call information
