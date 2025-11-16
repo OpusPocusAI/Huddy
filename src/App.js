@@ -1,8 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { UiModeProvider } from './contexts/UiModeContext';
+import AppProviders from './contexts/AppProviders';
 // Removed global Navbar; using sidebar menu instead
 import ProtectedRoute from './components/ProtectedRoute';
 import Main from './components/Main';
@@ -48,12 +46,10 @@ function App() {
     return () => clearInterval(interval);
   }, []);
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <UiModeProvider>
-          <BrowserRouter>
-            {/* Removed global Navbar; sidebar menu icons are used instead */}
-            <ErrorBoundary>
+    <AppProviders>
+      <BrowserRouter>
+        {/* Removed global Navbar; sidebar menu icons are used instead */}
+        <ErrorBoundary>
               <Routes>
                 {/* Public home (globe) view */}
                 <Route
@@ -104,16 +100,14 @@ function App() {
               />
               </Routes>
             </ErrorBoundary>
+            {process.env.REACT_APP_VOICE_DEV_WIDGET === '1' && <VoiceDevWidget />}
+            {process.env.REACT_APP_AVATAR_DEV_WIDGET === '1' && <AvatarDevWidget />}
+            {process.env.REACT_APP_TRANSCRIBE_DEV_VIEW === '1' && <TranscribeDevView />}
+            {process.env.REACT_APP_VOICE_BUTTONS === '1' && <VoiceButtons />}
+            {process.env.REACT_APP_REALTIME_CAPTIONS === '1' && <RealtimeCaptionOverlay />}
+            {process.env.REACT_APP_VOICE_TUNER === '1' && <VoiceTuner />}
           </BrowserRouter>
-          {process.env.REACT_APP_VOICE_DEV_WIDGET === '1' && <VoiceDevWidget />}
-          {process.env.REACT_APP_AVATAR_DEV_WIDGET === '1' && <AvatarDevWidget />}
-          {process.env.REACT_APP_TRANSCRIBE_DEV_VIEW === '1' && <TranscribeDevView />}
-          {process.env.REACT_APP_VOICE_BUTTONS === '1' && <VoiceButtons />}
-          {process.env.REACT_APP_REALTIME_CAPTIONS === '1' && <RealtimeCaptionOverlay />}
-          {process.env.REACT_APP_VOICE_TUNER === '1' && <VoiceTuner />}
-        </UiModeProvider>
-      </AuthProvider>
-    </ThemeProvider>
+        </AppProviders>
   );
 }
 
