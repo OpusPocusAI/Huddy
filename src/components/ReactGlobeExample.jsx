@@ -53,7 +53,7 @@ import ErrorBoundary from './ErrorBoundary';
 // import FacePreview from '../features/avatar/FacePreview';
 // import AvatarHead from '../features/avatar/AvatarHead';
 // import RealtimeCaptionOverlay from '../features/voice/RealtimeCaptionOverlay';
-// import { getCountries, getIndicators } from '../services/worldBankApi';
+import { getCountries, getIndicators } from '../services/worldBankApi';
 // import { sendMessage, setApiKey } from '../services/openaiClient';
 import { AuthContext } from '../contexts/AuthContext';
 const FinancialView = React.lazy(() => import('../features/ui/FinancialView'));
@@ -237,8 +237,32 @@ function ReactGlobeExampleInner() {
   const handleNewChat = useCallback(() => {}, []);
   const openConversation = useCallback(() => {}, []);
   const handleChatSend = useCallback(async () => {}, []);
-  const handleSearch = useCallback(() => {}, []);
-  const handleProcessDataset = useCallback(() => {}, []);
+
+  // Friendly slug ➜ World-Bank indicator mapping
+  const INDICATOR_ALIASES = {
+    '6.0.GDP_usd': 'NY.GDP.MKTP.KD',          // GDP (constant 2005 $)
+    'GDP_pc_PPP_2011': 'NY.GDP.PCAP.PP.KD',  // GDP per capita, PPP (constant 2011)
+    // add more aliases as needed …
+  };
+
+  const handleSearch = useCallback(async () => {
+    const q = datasetQuery.trim();
+    if (!q) return;
+    const inds = await getIndicators(q);
+    if (inds.length > 0) {
+      setDatasetSearchResults(inds.slice(0, 10));
+      setCountryList([]);
+    } else {
+      const countriesRes = await getCountries(q);
+      setCountryList(countriesRes);
+      setDatasetSearchResults([]);
+    }
+  }, [datasetQuery]);
+
+  const handleProcessDataset = useCallback((datasetId) => {
+    const realId = INDICATOR_ALIASES[datasetId] || datasetId;
+    handleDatasetSelect(realId, 'graph');
+  }, [handleDatasetSelect]);
   // Chat history & current conversation
   const [chatHistory, setChatHistory] = useState([]);
   const [currentConvId, setCurrentConvId] = useState(null);
