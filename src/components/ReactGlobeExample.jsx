@@ -234,9 +234,95 @@ function ReactGlobeExampleInner() {
   // const [fileOpen, setFileOpen] = useState({}); // no longer used in left sidebar
   const [filePreviews, setFilePreviews] = useState({});
 
-  const handleNewChat = useCallback(() => {}, []);
-  const openConversation = useCallback(() => {}, []);
-  const handleChatSend = useCallback(async () => {}, []);
+  const handleNewChat = useCallback(() => {
+    const newId = Date.now().toString();
+    const newConv = { id: newId, messages: [] };
+    setChatHistory(prev => [newConv, ...prev]);
+    setCurrentConvId(newId);
+    setCurrentConversation([]);
+    setApiError(null);
+  }, []);
+
+  const openConversation = useCallback((convId) => {
+    const conv = chatHistory.find(c => c.id === convId);
+    if (conv) {
+      setCurrentConvId(convId);
+      setCurrentConversation(conv.messages || []);
+      setApiError(null);
+    }
+  }, [chatHistory]);
+
+  const handleChatSend = useCallback(async (content) => {
+    // Ensure there is an active conversation ID
+    let convId = currentConvId;
+    let createdNew = false;
+    if (!convId) {
+      convId = Date.now().toString();
+      const newConv = { id: convId, messages: [] };
+      setChatHistory(prev => [newConv, ...prev]);
+      setCurrentConvId(convId);
+      setCurrentConversation([]);
+      setApiError(null);
+      createdNew = true;
+    }
+
+    // Append user message
+    const userMsg = { role: 'user', content, createdAt: Date.now() };
+    const baseMessages = createdNew ? [] : currentConversation;
+    const updated = [...baseMessages, userMsg];
+    setCurrentConversation(updated);
+    // Persist to history
+    setChatHistory(hist => (
+      hist.map(c => c.id === convId ? { ...c, messages: updated } : c)
+    ));
+
+    try {
+      // Call backend /api/chat which has function-calling tools
+      const response = await API.post('/api/chat', {
+        prompt: content,
+        conversationId: convId,
+        model: 'gpt-4o-mini'
+      });
+
+      let aiContent = response.data.reply || response.data.message || '';
+
+      // Parse special directives from AI function calls
+      if (aiContent.startsWith('__GLOBE__')) {
+        const jsonStr = aiContent.substring(9); // Remove '__GLOBE__' prefix
+        try {
+          const directive = JSON.parse(jsonStr);
+          // Show dataset on globe
+          handleDatasetSelect(directive.id, 'globe');
+          aiContent = `I've displayed the ${directive.id} dataset on the globe for you.`;
+        } catch (err) {
+          console.error('Failed to parse globe directive:', err);
+          aiContent = 'I tried to show data on the globe, but encountered an error.';
+        }
+      } else if (aiContent.startsWith('__PLOT__')) {
+        const jsonStr = aiContent.substring(8); // Remove '__PLOT__' prefix
+        try {
+          const directive = JSON.parse(jsonStr);
+          // Show dataset as graph
+          handleDatasetSelect(directive.id, 'graph');
+          if (directive.defaultRegion) setSelectedRegion(directive.defaultRegion);
+          aiContent = `I've plotted the ${directive.id} dataset for you.`;
+        } catch (err) {
+          console.error('Failed to parse plot directive:', err);
+          aiContent = 'I tried to show a graph, but encountered an error.';
+        }
+      }
+
+      const aiMsg = { role: 'assistant', content: aiContent, createdAt: Date.now() };
+      const updated2 = [...updated, aiMsg];
+      setCurrentConversation(updated2);
+      setChatHistory(hist => (
+        hist.map(c => c.id === convId ? { ...c, messages: updated2 } : c)
+      ));
+    } catch (err) {
+      console.error('Chat error:', err);
+      setApiError(err.response?.data?.error || err.message || 'Failed to send message');
+    }
+  }, [currentConvId, currentConversation, handleDatasetSelect, setSelectedRegion]);
 
   // Friendly slug ➜ World-Bank indicator mapping
   const INDICATOR_ALIASES = {
