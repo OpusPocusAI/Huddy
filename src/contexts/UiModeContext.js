@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
 
-export const UiModeContext = createContext(null);
+const UiModeContext = createContext(null);
 
 export function UiModeProvider({ children }) {
   const [mode, setMode] = useState('home');
