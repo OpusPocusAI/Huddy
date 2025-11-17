@@ -746,15 +746,29 @@ No `vercel.json` needed for standard Create React App.
 ### Common Deployment Issues
 
 **1. "Cannot access 'Ht'/'vn' before initialization" - CRITICAL**
-**Status:** ✓ SOLVED (commit 991eb19)
+**Status:** ✓ SOLVED (commit 8630113)
 
-**Problem:** Terser minification in production builds causes Temporal Dead Zone (TDZ) errors when importing modules at the top level. Variables are accessed before initialization, causing runtime crashes with minified variable names like 'Ht', 'vn', 'Wt', etc.
+**Problem:** Terser minification in production builds causes Temporal Dead Zone (TDZ) errors when accessing variables before initialization. Runtime crashes with minified variable names like 'Ht', 'vn', 'Wt', etc.
 
-**Root Cause:**
-- Static imports at module level: `import { getCountries, getIndicators } from '../services/worldBankApi'`
-- Webpack/terser reorders code during minification
-- Module initialization order becomes unpredictable
-- Creates TDZ errors that only appear in production, not development
+**Actual Root Cause:**
+🎯 **Forward references in useCallback dependency arrays**
+
+The error occurred because `handleProcessDataset` (defined at line 299) depended on `handleDatasetSelect` which wasn't defined until line 459:
+
+```javascript
+// Line 299: ❌ BROKEN - Forward reference
+const handleProcessDataset = useCallback((datasetId) => {
+  const realId = INDICATOR_ALIASES[datasetId] || datasetId;
+  handleDatasetSelect(realId, 'graph');  // Uses handleDatasetSelect
+}, [handleDatasetSelect]);  // ❌ Depends on variable defined 160 lines later!
+
+// ... 160 lines of code ...
+
+// Line 459: handleDatasetSelect finally defined here
+const { handleDatasetSelect, handleResetGlobe } = useDatasetSelection({...});
+```
+
+In development builds this works due to hoisting, but in minified production builds terser tries to access `handleDatasetSelect` in the dependency array before initialization, causing TDZ error.
 
 **Attempted Fixes (all failed):**
 - ❌ Changing React 17 API to React 18 createRoot - Still failed
@@ -764,34 +778,33 @@ No `vercel.json` needed for standard Create React App.
 - ❌ Creating unified AppProviders wrapper - Still failed
 - ❌ Dynamic import() inside callbacks - Still failed
 - ❌ Removing duplicate AuthProvider.jsx - Still failed
+- ❌ Inline fetch() instead of imports - **Still failed!** (The fetch was fine, forward ref was the issue)
 
 **Actual Solution:**
-✅ **Inline fetch() calls instead of module imports**
+✅ **Remove forward references - define callbacks in proper order**
+
 ```javascript
-// BROKEN: Static import causes TDZ in minified build
-import { getCountries, getIndicators } from '../services/worldBankApi';
+// ✅ WORKING: No forward references
+const handleProcessDataset = useCallback((datasetId) => {
+  console.log('Process dataset:', datasetId);
+  // No dependencies on variables defined later
+}, []);  // Empty dependency array - no forward references
 
-const handleSearch = useCallback(async () => {
-  const results = await getIndicators(query);
-  // ...
-}, [query]);
-
-// WORKING: Inline fetch avoids module import
-const handleSearch = useCallback(async () => {
-  const url = new URL('https://api.worldbank.org/v2/indicator');
-  url.searchParams.set('format', 'json');
-  const res = await fetch(url);
-  const json = await res.json();
-  // ...
-}, [query]);
+// Later, after handleDatasetSelect exists, we can update this callback
 ```
 
+**Alternative Solutions:**
+1. Move `handleProcessDataset` definition to AFTER `handleDatasetSelect` is defined
+2. Use `useCallback` with an empty dependency array and access variables via refs
+3. Restructure code so all dependencies are defined before usage
+
 **Key Learnings:**
-1. **Development builds are unreliable for testing** - Errors only appear in minified production
-2. **Module imports can break minification** - Avoid importing external modules in large components
+1. **Development builds hide initialization order issues** - Hoisting masks problems that appear in production
+2. **Forward references break minification** - Never reference variables in dependency arrays before they're defined
 3. **Test every change on Vercel** - Local builds may succeed while production fails
-4. **Inline code when possible** - Self-contained callbacks avoid module initialization issues
+4. **Check definition order** - In large components, ensure callbacks reference only previously-defined variables
 5. **Small incremental changes** - Makes it easier to identify what breaks production
+6. **Module imports were a red herring** - The inline fetch approach failed too, proving imports weren't the issue
 
 **Deployment Testing Strategy:**
 1. Make minimal change (e.g., just console.log)
@@ -816,14 +829,18 @@ claude/explore-repo-01DkWNGUixdA2QjUHs7tfHqo
 
 ### Recent Commits
 ```
-b857330 - Update to React 18 createRoot API
-76b8688 - Remove unused duplicate AuthProvider.jsx file
-a1be450 - Fix duplicate AuthProvider causing initialization error
-e6473e2 - Disable broken OWID integration, use World Bank instead
-6e3d1e2 - Make AI chat adaptive for discovering datasets
-0d0e597 - Restore AI chat integration with backend
-8b28b7d - Restore World Bank dataset search functionality
+8630113 - fix: Remove forward reference causing TDZ error (✓ DEPLOYMENT WORKS)
+991eb19 - fix: Implement dataset search with inline fetch to avoid import issues
+7f5f6d8 - docs: Update CLAUDE.md with critical deployment findings
+902fea9 - Revert to React 17 ReactDOM.render API for compatibility
+017958b - Restore original mobile-optimized-refactor structure completely
 ```
+
+**Current State:**
+- ✅ Vercel deployment working (commit 8630113)
+- ✅ Dataset search functional (searches World Bank API)
+- ⚠️ Dataset processing (clicking "Process Dataset") only logs, not yet wired to globe
+- ❌ AI chat → globe control not yet restored (empty callback)
 
 ### Commit Guidelines
 ```bash
@@ -934,42 +951,68 @@ npm run build
 
 ## Developer Notes
 
-### What This Session Fixed
-Starting from a broken `mobile-optimized-refactor` branch:
+### Session History
+
+**Previous Session (2024-11-16):**
+Starting from a broken `mobile-optimized-refactor` branch, fixed:
 1. ✓ Dataset search completely non-functional → Restored World Bank integration
 2. ✓ AI chat couldn't control globe → Reconnected to backend function calling
 3. ✓ AI limited to pre-configured datasets → Made adaptive with dynamic discovery
 4. ✓ OWID integration broken → Disabled gracefully, directed to World Bank
 5. ✓ Production build initialization error → Fixed duplicate AuthProviders + React 18 API
 
-### Critical Files Modified
-- `/src/components/ReactGlobeExample.jsx` - Main app orchestrator (237 lines changed)
-- `/src/index.js` - React 18 createRoot API, removed duplicate wrapper
-- `/server/index.js` - Disabled OWID, enhanced AI system prompt
-- `/src/contexts/AuthProvider.jsx` - Deleted (duplicate)
+**Current Session (2024-11-17): Deployment Crisis & Resolution**
+The previous session's fixes worked locally but **broke Vercel production deployments** with "Cannot access 'Ht'/'vn' before initialization" errors.
+
+**The Debugging Journey:**
+1. ❌ Tried 8+ different fixes (React API changes, StrictMode, exports, etc.) - All failed
+2. ❌ Thought it was module imports - Switched to inline fetch - Still failed!
+3. ✅ **Found actual root cause:** Forward reference in useCallback dependency array
+4. ✅ **Solution:** Removed forward reference to `handleDatasetSelect` from `handleProcessDataset`
+
+**Time Investment:** ~4 hours of iterative debugging with 20+ Vercel deployments to isolate the issue
+
+**What We Learned:**
+- Development builds are completely unreliable for catching minification issues
+- Forward references in dependency arrays break terser minification
+- Small incremental changes with production testing is the ONLY reliable approach
+- Module imports were a red herring - the fetch implementation also failed
+
+### Critical Files Modified (This Session)
+- `/src/components/ReactGlobeExample.jsx` - Fixed forward reference (commit 8630113)
+- `/CLAUDE.md` - Comprehensive deployment debugging documentation
 
 ### Architecture Insights
 - **ReactGlobeExample.jsx is the heart** - It orchestrates all features, handles chat, datasets, and view modes
 - **Backend function calling is powerful** - AI naturally discovers datasets via conversation
 - **Event bus enables loose coupling** - Voice/Avatar/UI communicate without direct dependencies
 - **Feature folders improve organization** - Modular architecture makes navigation easier
+- **⚠️ Large component files are fragile** - 800+ line components make dependency ordering critical
 
 ### What Works Well
-- World Bank API integration is solid
-- AI function calling is robust and extensible
-- Globe rendering is performant
-- Authentication flow is clean
-- Feature-based architecture scales well
+- ✅ Vercel deployment (finally!)
+- ✅ Dataset search (World Bank API with inline fetch)
+- ✅ Globe rendering is performant
+- ✅ Authentication flow is clean
+- ✅ Feature-based architecture scales well
 
 ### What Needs Attention
-- OWID endpoints are completely dead (external issue)
-- Build bundle size could be optimized
-- Some legacy components in `/src/components/` could migrate to `/src/features/`
-- More comprehensive error handling needed
-- Documentation of individual feature modules
+- ⚠️ Dataset processing button only logs (not wired to globe yet)
+- ⚠️ AI chat → globe control not restored (empty callback)
+- ⚠️ Need to re-implement handleProcessDataset properly after handleDatasetSelect is available
+- 🔴 OWID endpoints are completely dead (external issue)
+- 💡 Build bundle size could be optimized
+- 💡 Some legacy components in `/src/components/` could migrate to `/src/features/`
+- 💡 More comprehensive error handling needed
+
+### Recommended Next Steps
+1. **Immediately:** Move `handleProcessDataset` definition to AFTER `handleDatasetSelect` is defined
+2. Restore AI chat → globe control functionality (careful with forward references!)
+3. Test all dataset processing flows on production Vercel
+4. Consider refactoring ReactGlobeExample.jsx into smaller components to avoid ordering issues
 
 ---
 
-**Last Updated:** 2024-11-16 (Session: claude/explore-repo-01DkWNGUixdA2QjUHs7tfHqo)
-**Status:** ✓ All critical issues resolved, ready for deployment
-**Next Steps:** Test Vercel deployment, monitor for runtime issues
+**Last Updated:** 2025-11-17 (Session: claude/explore-repo-01DkWNGUixdA2QjUHs7tfHqo)
+**Status:** ✅ Vercel deployment WORKING (commit 8630113)
+**Next Steps:** Carefully restore dataset processing and AI chat features without breaking production
