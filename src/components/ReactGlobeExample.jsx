@@ -290,10 +290,9 @@ function ReactGlobeExampleInner() {
     }
   }, [datasetQuery]);
 
-  const handleProcessDataset = useCallback((datasetId) => {
-    console.log('Process dataset:', datasetId);
-    // TODO: Implement after handleDatasetSelect is available
-  }, []);
+  // handleProcessDataset moved to after handleDatasetSelect is defined (line ~540)
+  // to avoid forward reference TDZ errors in minified builds
+
   // Chat history & current conversation
   const [chatHistory, setChatHistory] = useState([]);
   const [currentConvId, setCurrentConvId] = useState(null);
@@ -469,6 +468,18 @@ function ReactGlobeExampleInner() {
     setSelectedGdpYear,
     setGlobeDataError,
   });
+
+  // Dataset processing - moved here AFTER handleDatasetSelect to avoid forward reference
+  // Friendly slug → World-Bank indicator mapping
+  const INDICATOR_ALIASES = {
+    '6.0.GDP_usd': 'NY.GDP.MKTP.KD',          // GDP (constant 2005 $)
+    'GDP_pc_PPP_2011': 'NY.GDP.PCAP.PP.KD',  // GDP per capita, PPP (constant 2011)
+  };
+
+  const handleProcessDataset = useCallback((datasetId) => {
+    const realId = INDICATOR_ALIASES[datasetId] || datasetId;
+    handleDatasetSelect(realId, 'graph');
+  }, [handleDatasetSelect]);
 
   // Debug dataset selection
   useEffect(() => {
