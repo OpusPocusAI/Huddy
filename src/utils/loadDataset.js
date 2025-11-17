@@ -68,13 +68,20 @@ export const loadDataset = async (datasetID) => {
       }
 
       // No world data - fetch for all countries instead
-      console.log(`Indicator ${datasetID} has no world data, fetching for all countries...`);
-      const countryList = await getCountries();
-      const codes = countryList.map(c => c.iso2Code).filter(code => code).slice(0, 20); // Limit to 20 countries (parallel fetching is fast)
-      console.log(`Fetching ${datasetID} for ${codes.length} countries:`, codes);
+      console.log(`Indicator ${datasetID} has no world data, fetching for selected countries...`);
 
-      const seriesMap = await getIndicatorData(codes, datasetID);
-      const data = codes.flatMap(code => (
+      // Instead of first 20 alphabetically, use a curated list of diverse major countries
+      // that are more likely to have comprehensive World Bank data
+      const priorityCountries = [
+        'US', 'CN', 'JP', 'DE', 'GB', 'FR', 'IN', 'BR', 'CA', 'AU',  // Major economies
+        'MX', 'ZA', 'EG', 'NG', 'KE', 'AR', 'TR', 'ID', 'TH', 'VN',  // Regional representatives
+        'SE', 'NO', 'DK', 'FI', 'NL', 'CH', 'AT', 'BE', 'SG', 'KR'   // High data availability
+      ];
+
+      console.log(`Fetching ${datasetID} for ${priorityCountries.length} diverse countries:`, priorityCountries);
+
+      const seriesMap = await getIndicatorData(priorityCountries, datasetID);
+      const data = priorityCountries.flatMap(code => (
         (seriesMap[code] || []).map(dp => ({
           year: +dp.date,
           entity: dp.country.value,
