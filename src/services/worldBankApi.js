@@ -44,22 +44,40 @@ async function getIndicators(q) {
 
 /**
  * Fetch time-series data for a given indicator & country list.
+ * Fetches all countries in parallel for better performance.
  */
 async function getIndicatorData(countryCodes, indicator, start, end, lang = DEFAULTS.lang) {
   if (!Array.isArray(countryCodes)) countryCodes = [countryCodes];
-  const results = {};
-  for (const code of countryCodes) {
+
+  // Create all fetch promises at once (parallel)
+  const fetchPromises = countryCodes.map(async (code) => {
     const url = new URL(`${BASE_URL}/country/${code}/indicator/${indicator}`);
     url.searchParams.set('format', DEFAULTS.format);
     url.searchParams.set('per_page', DEFAULTS.per_page);
     if (start !== undefined && end !== undefined) url.searchParams.set('date', `${start}:${end}`);
     url.searchParams.set('lang', lang);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`WorldBank API error: ${res.status} ${res.statusText}`);
-    const json = await res.json();
-    if (!Array.isArray(json) || json.length < 2) throw new Error('Unexpected WorldBank response shape');
-    results[code] = json[1];
-  }
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return { code, data: null };
+      const json = await res.json();
+      if (!Array.isArray(json) || json.length < 2) return { code, data: null };
+      return { code, data: json[1] };
+    } catch (err) {
+      console.warn(`Failed to fetch ${indicator} for ${code}:`, err);
+      return { code, data: null };
+    }
+  });
+
+  // Wait for all fetches to complete in parallel
+  const responses = await Promise.all(fetchPromises);
+
+  // Convert to results object
+  const results = {};
+  responses.forEach(({ code, data }) => {
+    if (data) results[code] = data;
+  });
+
   return results;
 }
 

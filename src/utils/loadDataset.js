@@ -70,7 +70,7 @@ export const loadDataset = async (datasetID) => {
       // No world data - fetch for all countries instead
       console.log(`Indicator ${datasetID} has no world data, fetching for all countries...`);
       const countryList = await getCountries();
-      const codes = countryList.map(c => c.iso2Code).filter(code => code).slice(0, 5); // Limit to 5 countries for faster loading
+      const codes = countryList.map(c => c.iso2Code).filter(code => code).slice(0, 20); // Limit to 20 countries (parallel fetching is fast)
       console.log(`Fetching ${datasetID} for ${codes.length} countries:`, codes);
 
       const seriesMap = await getIndicatorData(codes, datasetID);
