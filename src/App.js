@@ -55,7 +55,7 @@ function App() {
             {/* Removed global Navbar; sidebar menu icons are used instead */}
             <ErrorBoundary>
               <React.Suspense fallback={<div className="p-4 text-gray-400">Loading…</div>}>
-                <Routes>
+              <Routes>
                 {/* Public home (globe) view */}
                 <Route
                   path="/"
@@ -103,16 +103,16 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-                </Routes>
+              </Routes>
               </React.Suspense>
             </ErrorBoundary>
-            {process.env.REACT_APP_VOICE_DEV_WIDGET === '1' && <VoiceDevWidget />}
-            {process.env.REACT_APP_AVATAR_DEV_WIDGET === '1' && <AvatarDevWidget />}
-            {process.env.REACT_APP_TRANSCRIBE_DEV_VIEW === '1' && <TranscribeDevView />}
-            {process.env.REACT_APP_VOICE_BUTTONS === '1' && <VoiceButtons />}
-            {process.env.REACT_APP_REALTIME_CAPTIONS === '1' && <RealtimeCaptionOverlay />}
-            {process.env.REACT_APP_VOICE_TUNER === '1' && <VoiceTuner />}
           </BrowserRouter>
+          {process.env.REACT_APP_VOICE_DEV_WIDGET === '1' && <VoiceDevWidget />}
+          {process.env.REACT_APP_AVATAR_DEV_WIDGET === '1' && <AvatarDevWidget />}
+          {process.env.REACT_APP_TRANSCRIBE_DEV_VIEW === '1' && <TranscribeDevView />}
+          {process.env.REACT_APP_VOICE_BUTTONS === '1' && <VoiceButtons />}
+          {process.env.REACT_APP_REALTIME_CAPTIONS === '1' && <RealtimeCaptionOverlay />}
+          {process.env.REACT_APP_VOICE_TUNER === '1' && <VoiceTuner />}
         </UiModeProvider>
       </AuthProvider>
     </ThemeProvider>
