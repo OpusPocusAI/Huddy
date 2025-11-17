@@ -745,20 +745,65 @@ No `vercel.json` needed for standard Create React App.
 
 ### Common Deployment Issues
 
-**1. "Cannot access 'Ht' before initialization"**
-- ✓ Fixed: Removed duplicate AuthProvider files
-- ✓ Fixed: Updated to React 18 createRoot API
-- Commits: 76b8688, b857330, a1be450
+**1. "Cannot access 'Ht'/'vn' before initialization" - CRITICAL**
+**Status:** ✓ SOLVED (commit 991eb19)
 
-**2. "Branch not found"**
-- Branch exists: `claude/explore-repo-01DkWNGUixdA2QjUHs7tfHqo`
-- Try: Refresh Vercel's branch list
-- Alternative: Deploy from commit SHA `b857330`
+**Problem:** Terser minification in production builds causes Temporal Dead Zone (TDZ) errors when importing modules at the top level. Variables are accessed before initialization, causing runtime crashes with minified variable names like 'Ht', 'vn', 'Wt', etc.
 
-**3. Backend API calls failing**
-- Check: `REACT_APP_API_URL` is set correctly
+**Root Cause:**
+- Static imports at module level: `import { getCountries, getIndicators } from '../services/worldBankApi'`
+- Webpack/terser reorders code during minification
+- Module initialization order becomes unpredictable
+- Creates TDZ errors that only appear in production, not development
+
+**Attempted Fixes (all failed):**
+- ❌ Changing React 17 API to React 18 createRoot - Still failed
+- ❌ Removing React.lazy() code splitting - Still failed
+- ❌ Disabling StrictMode - Still failed
+- ❌ Exporting context constants differently - Still failed
+- ❌ Creating unified AppProviders wrapper - Still failed
+- ❌ Dynamic import() inside callbacks - Still failed
+- ❌ Removing duplicate AuthProvider.jsx - Still failed
+
+**Actual Solution:**
+✅ **Inline fetch() calls instead of module imports**
+```javascript
+// BROKEN: Static import causes TDZ in minified build
+import { getCountries, getIndicators } from '../services/worldBankApi';
+
+const handleSearch = useCallback(async () => {
+  const results = await getIndicators(query);
+  // ...
+}, [query]);
+
+// WORKING: Inline fetch avoids module import
+const handleSearch = useCallback(async () => {
+  const url = new URL('https://api.worldbank.org/v2/indicator');
+  url.searchParams.set('format', 'json');
+  const res = await fetch(url);
+  const json = await res.json();
+  // ...
+}, [query]);
+```
+
+**Key Learnings:**
+1. **Development builds are unreliable for testing** - Errors only appear in minified production
+2. **Module imports can break minification** - Avoid importing external modules in large components
+3. **Test every change on Vercel** - Local builds may succeed while production fails
+4. **Inline code when possible** - Self-contained callbacks avoid module initialization issues
+5. **Small incremental changes** - Makes it easier to identify what breaks production
+
+**Deployment Testing Strategy:**
+1. Make minimal change (e.g., just console.log)
+2. Build locally: `npm run build`
+3. Push to Vercel and test production URL
+4. If works, add next small piece of functionality
+5. If breaks, revert immediately and try different approach
+
+**2. Backend API calls failing**
+- Check: `REACT_APP_API_URL` is set correctly in Vercel environment variables
 - Ensure: CORS is enabled on backend
-- Verify: Backend is deployed separately (Express server)
+- Verify: Backend is deployed separately (Express server on different Vercel project)
 
 ---
 
@@ -807,9 +852,22 @@ EOF
 
 ### Dataset Search Returns No Results
 1. Check World Bank API is accessible: `curl https://api.worldbank.org/v2/country?format=json`
-2. Verify `worldBankApi.js` is imported in ReactGlobeExample.jsx
-3. Check `handleSearch()` is bound to search button onClick
-4. Console log the API response to debug filtering
+2. Verify `handleSearch()` implementation in ReactGlobeExample.jsx (uses inline fetch, not imports)
+3. Check `handleSearch` is passed to LeftSidebarContainer → LeftSidebarContent → DatasetSearchPanel
+4. Verify "Go" button onClick is wired to onSearch prop
+5. Check browser console for fetch errors or network issues
+6. Test with simple queries like "GDP" or "population"
+
+**UI Wiring Check:**
+```
+ReactGlobeExample.jsx (handleSearch definition)
+  ↓ passes handleSearch={handleSearch}
+LeftSidebarContainer.jsx (receives handleSearch prop)
+  ↓ passes handleSearch={handleSearch}
+LeftSidebarContent.jsx (receives handleSearch prop)
+  ↓ passes onSearch={handleSearch}
+DatasetSearchPanel.jsx (Go button onClick={onSearch})
+```
 
 ### AI Chat Not Controlling Globe
 1. Verify `/api/chat` endpoint is running on backend
