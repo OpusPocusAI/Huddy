@@ -50,17 +50,43 @@ export const loadDataset = async (datasetID) => {
       return [];
     }
   }
-  // Handle World Bank indicators (world-level)
+  // Handle World Bank indicators
   if (datasetID.includes('.')) {
     try {
-      const seriesMap = await getIndicatorData('WLD', datasetID);
-      const series = seriesMap['WLD'] || [];
-      console.log(`Indicator ${datasetID} returned ${series.length} data points`);
-      const worldData = series
-        .map(dp => ({ year: +dp.date, entity: 'World', population: +dp.value, value: +dp.value }))
-        .filter(d => !isNaN(d.year) && !isNaN(d.value))
-        .sort((a, b) => a.year - b.year);
-      return worldData;
+      // First try world-level data
+      const worldSeriesMap = await getIndicatorData('WLD', datasetID);
+      const worldSeries = worldSeriesMap['WLD'] || [];
+
+      if (worldSeries.length > 0) {
+        // World data exists, use it
+        console.log(`Indicator ${datasetID} returned ${worldSeries.length} world data points`);
+        const worldData = worldSeries
+          .map(dp => ({ year: +dp.date, entity: 'World', population: +dp.value, value: +dp.value }))
+          .filter(d => !isNaN(d.year) && !isNaN(d.value))
+          .sort((a, b) => a.year - b.year);
+        return worldData;
+      }
+
+      // No world data - fetch for all countries instead
+      console.log(`Indicator ${datasetID} has no world data, fetching for all countries...`);
+      const countryList = await getCountries();
+      const codes = countryList.map(c => c.iso2Code).filter(code => code).slice(0, 50); // Limit to 50 countries for performance
+      console.log(`Fetching ${datasetID} for ${codes.length} countries`);
+
+      const seriesMap = await getIndicatorData(codes, datasetID);
+      const data = codes.flatMap(code => (
+        (seriesMap[code] || []).map(dp => ({
+          year: +dp.date,
+          entity: dp.country.value,
+          iso: dp['countryiso3code'],
+          value: dp.value != null ? +dp.value : null
+        }))
+      ));
+
+      const clean = data.filter(d => !isNaN(d.year) && d.value != null)
+                        .sort((a,b) => a.year - b.year);
+      console.log(`Indicator ${datasetID} loaded ${clean.length} entries from countries`);
+      return clean.length > 0 ? clean : [];
     } catch (err) {
       console.error(`Error loading indicator ${datasetID}:`, err);
       return [];
