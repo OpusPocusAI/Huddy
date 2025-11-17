@@ -1,19 +1,21 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import AppProviders from './contexts/AppProviders';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { UiModeProvider } from './contexts/UiModeContext';
 // Removed global Navbar; using sidebar menu instead
 import ProtectedRoute from './components/ProtectedRoute';
 import Main from './components/Main';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Settings from './pages/Settings';
-import IdeologramPage from './pages/IdeologramPage';
-import AvatarRigPage from './pages/AvatarRigPage';
+const Settings = React.lazy(() => import('./pages/Settings'));
+const IdeologramPage = React.lazy(() => import('./pages/IdeologramPage'));
+const AvatarRigPage = React.lazy(() => import('./pages/AvatarRigPage'));
 import VoiceDevWidget from './features/voice/VoiceDevWidget';
 import createMcpClient from './shared/agents/mcpClient';
 import AvatarDevWidget from './features/voice/AvatarDevWidget';
-import AsciiGlobePage from './pages/AsciiGlobePage';
+const AsciiGlobePage = React.lazy(() => import('./pages/AsciiGlobePage'));
 import TranscribeDevView from './features/voice/TranscribeDevView';
 import VoiceButtons from './features/voice/VoiceButtons';
 import RealtimeCaptionOverlay from './features/voice/RealtimeCaptionOverlay';
@@ -46,11 +48,14 @@ function App() {
     return () => clearInterval(interval);
   }, []);
   return (
-    <AppProviders>
-      <BrowserRouter>
-        {/* Removed global Navbar; sidebar menu icons are used instead */}
-        <ErrorBoundary>
-              <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <UiModeProvider>
+          <BrowserRouter>
+            {/* Removed global Navbar; sidebar menu icons are used instead */}
+            <ErrorBoundary>
+              <React.Suspense fallback={<div className="p-4 text-gray-400">Loading…</div>}>
+                <Routes>
                 {/* Public home (globe) view */}
                 <Route
                   path="/"
@@ -98,7 +103,8 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              </Routes>
+                </Routes>
+              </React.Suspense>
             </ErrorBoundary>
             {process.env.REACT_APP_VOICE_DEV_WIDGET === '1' && <VoiceDevWidget />}
             {process.env.REACT_APP_AVATAR_DEV_WIDGET === '1' && <AvatarDevWidget />}
@@ -107,7 +113,9 @@ function App() {
             {process.env.REACT_APP_REALTIME_CAPTIONS === '1' && <RealtimeCaptionOverlay />}
             {process.env.REACT_APP_VOICE_TUNER === '1' && <VoiceTuner />}
           </BrowserRouter>
-        </AppProviders>
+        </UiModeProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
