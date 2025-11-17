@@ -53,7 +53,7 @@ import ErrorBoundary from './ErrorBoundary';
 // import FacePreview from '../features/avatar/FacePreview';
 // import AvatarHead from '../features/avatar/AvatarHead';
 // import RealtimeCaptionOverlay from '../features/voice/RealtimeCaptionOverlay';
-import { getCountries, getIndicators } from '../services/worldBankApi';
+// import { getCountries, getIndicators } from '../services/worldBankApi';
 // import { sendMessage, setApiKey } from '../services/openaiClient';
 import { AuthContext } from '../contexts/AuthContext';
 const FinancialView = React.lazy(() => import('../features/ui/FinancialView'));
@@ -234,132 +234,11 @@ function ReactGlobeExampleInner() {
   // const [fileOpen, setFileOpen] = useState({}); // no longer used in left sidebar
   const [filePreviews, setFilePreviews] = useState({});
 
-  const handleNewChat = useCallback(() => {
-    const newId = Date.now().toString();
-    const newConv = { id: newId, messages: [] };
-    setChatHistory(prev => [newConv, ...prev]);
-    setCurrentConvId(newId);
-    setCurrentConversation([]);
-    setApiError(null);
-  }, []);
-
-  const openConversation = useCallback((convId) => {
-    const conv = chatHistory.find(c => c.id === convId);
-    if (conv) {
-      setCurrentConvId(convId);
-      setCurrentConversation(conv.messages || []);
-      setApiError(null);
-    }
-  }, [chatHistory]);
-
-  const handleChatSend = useCallback(async (content) => {
-    // Ensure there is an active conversation ID
-    let convId = currentConvId;
-    let createdNew = false;
-    if (!convId) {
-      convId = Date.now().toString();
-      const newConv = { id: convId, messages: [] };
-      setChatHistory(prev => [newConv, ...prev]);
-      setCurrentConvId(convId);
-      setCurrentConversation([]);
-      setApiError(null);
-      createdNew = true;
-    }
-
-    // Append user message
-    const userMsg = { role: 'user', content, createdAt: Date.now() };
-    const baseMessages = createdNew ? [] : currentConversation;
-    const updated = [...baseMessages, userMsg];
-    setCurrentConversation(updated);
-    // Persist to history
-    setChatHistory(hist => (
-      hist.map(c => c.id === convId ? { ...c, messages: updated } : c)
-    ));
-
-    try {
-      // Call backend /api/chat which has function-calling tools
-      const response = await API.post('/api/chat', {
-        prompt: content,
-        conversationId: convId,
-        model: 'gpt-4o-mini'
-      });
-
-      let aiContent = response.data.reply || response.data.message || '';
-
-      // Parse special directives from AI function calls
-      if (aiContent.startsWith('__GLOBE__')) {
-        const jsonStr = aiContent.substring(9); // Remove '__GLOBE__' prefix
-        try {
-          const directive = JSON.parse(jsonStr);
-          // Show dataset on globe
-          try {
-            handleDatasetSelect(directive.id, 'globe');
-            aiContent = `I've displayed the ${directive.id} dataset on the globe for you.`;
-          } catch (selectErr) {
-            console.error('Failed to load dataset on globe:', selectErr);
-            // If dataset doesn't exist, suggest alternatives
-            aiContent = `I tried to show "${directive.id}" on the globe, but it's not currently loaded. You can:\n- Ask me to search for similar datasets\n- Try the Dataset Search panel on the left\n- Request a different dataset from the available list`;
-          }
-        } catch (err) {
-          console.error('Failed to parse globe directive:', err);
-          aiContent = 'I tried to show data on the globe, but encountered an error parsing the request.';
-        }
-      } else if (aiContent.startsWith('__PLOT__')) {
-        const jsonStr = aiContent.substring(8); // Remove '__PLOT__' prefix
-        try {
-          const directive = JSON.parse(jsonStr);
-          // Show dataset as graph
-          try {
-            handleDatasetSelect(directive.id, 'graph');
-            if (directive.defaultRegion) setSelectedRegion(directive.defaultRegion);
-            aiContent = `I've plotted the ${directive.id} dataset for you.`;
-          } catch (selectErr) {
-            console.error('Failed to load dataset on graph:', selectErr);
-            aiContent = `I tried to plot "${directive.id}", but it's not currently loaded. Please use the Dataset Search to find it, or ask me to search for similar datasets.`;
-          }
-        } catch (err) {
-          console.error('Failed to parse plot directive:', err);
-          aiContent = 'I tried to show a graph, but encountered an error parsing the request.';
-        }
-      }
-
-      const aiMsg = { role: 'assistant', content: aiContent, createdAt: Date.now() };
-      const updated2 = [...updated, aiMsg];
-      setCurrentConversation(updated2);
-      setChatHistory(hist => (
-        hist.map(c => c.id === convId ? { ...c, messages: updated2 } : c)
-      ));
-    } catch (err) {
-      console.error('Chat error:', err);
-      setApiError(err.response?.data?.error || err.message || 'Failed to send message');
-    }
-  }, [currentConvId, currentConversation, handleDatasetSelect, setSelectedRegion]);
-
-  // Friendly slug ➜ World-Bank indicator mapping
-  const INDICATOR_ALIASES = {
-    '6.0.GDP_usd': 'NY.GDP.MKTP.KD',          // GDP (constant 2005 $)
-    'GDP_pc_PPP_2011': 'NY.GDP.PCAP.PP.KD',  // GDP per capita, PPP (constant 2011)
-    // add more aliases as needed …
-  };
-
-  const handleSearch = useCallback(async () => {
-    const q = datasetQuery.trim();
-    if (!q) return;
-    const inds = await getIndicators(q);
-    if (inds.length > 0) {
-      setDatasetSearchResults(inds.slice(0, 10));
-      setCountryList([]);
-    } else {
-      const countriesRes = await getCountries(q);
-      setCountryList(countriesRes);
-      setDatasetSearchResults([]);
-    }
-  }, [datasetQuery]);
-
-  const handleProcessDataset = useCallback((datasetId) => {
-    const realId = INDICATOR_ALIASES[datasetId] || datasetId;
-    handleDatasetSelect(realId, 'graph');
-  }, [handleDatasetSelect]);
+  const handleNewChat = useCallback(() => {}, []);
+  const openConversation = useCallback(() => {}, []);
+  const handleChatSend = useCallback(async () => {}, []);
+  const handleSearch = useCallback(() => {}, []);
+  const handleProcessDataset = useCallback(() => {}, []);
   // Chat history & current conversation
   const [chatHistory, setChatHistory] = useState([]);
   const [currentConvId, setCurrentConvId] = useState(null);
