@@ -237,10 +237,69 @@ function ReactGlobeExampleInner() {
   const handleNewChat = useCallback(() => {}, []);
   const openConversation = useCallback(() => {}, []);
   const handleChatSend = useCallback(async () => {}, []);
-  const handleSearch = useCallback(() => {
-    console.log('Search triggered with query:', datasetQuery);
+  const handleSearch = useCallback(async () => {
+    const q = datasetQuery.trim();
+    if (!q) return;
+
+    try {
+      // Fetch indicators directly instead of importing to avoid initialization issues
+      const indicatorsUrl = new URL('https://api.worldbank.org/v2/indicator');
+      indicatorsUrl.searchParams.set('format', 'json');
+      indicatorsUrl.searchParams.set('per_page', '1000');
+      const indicatorsRes = await fetch(indicatorsUrl);
+      if (!indicatorsRes.ok) throw new Error('Failed to fetch indicators');
+      const indicatorsJson = await indicatorsRes.json();
+
+      if (Array.isArray(indicatorsJson) && indicatorsJson.length >= 2) {
+        const allIndicators = indicatorsJson[1];
+        const query = q.toLowerCase();
+        const matchingIndicators = allIndicators.filter(ind =>
+          ind.name.toLowerCase().includes(query) || ind.id.toLowerCase().includes(query)
+        );
+
+        if (matchingIndicators.length > 0) {
+          setDatasetSearchResults(matchingIndicators.slice(0, 10));
+          setCountryList([]);
+          return;
+        }
+      }
+
+      // If no indicators found, try countries
+      const countriesUrl = new URL('https://api.worldbank.org/v2/country');
+      countriesUrl.searchParams.set('format', 'json');
+      countriesUrl.searchParams.set('per_page', '1000');
+      const countriesRes = await fetch(countriesUrl);
+      if (!countriesRes.ok) throw new Error('Failed to fetch countries');
+      const countriesJson = await countriesRes.json();
+
+      if (Array.isArray(countriesJson) && countriesJson.length >= 2) {
+        const allCountries = countriesJson[1];
+        const query = q.toLowerCase();
+        const matchingCountries = allCountries.filter(c =>
+          c.name.toLowerCase().includes(query) ||
+          c.iso2Code.toLowerCase() === query ||
+          c.id.toLowerCase() === query
+        );
+        setCountryList(matchingCountries);
+        setDatasetSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setDatasetSearchResults([]);
+      setCountryList([]);
+    }
   }, [datasetQuery]);
-  const handleProcessDataset = useCallback(() => {}, []);
+
+  // Friendly slug ➜ World-Bank indicator mapping
+  const INDICATOR_ALIASES = {
+    '6.0.GDP_usd': 'NY.GDP.MKTP.KD',          // GDP (constant 2005 $)
+    'GDP_pc_PPP_2011': 'NY.GDP.PCAP.PP.KD',  // GDP per capita, PPP (constant 2011)
+  };
+
+  const handleProcessDataset = useCallback((datasetId) => {
+    const realId = INDICATOR_ALIASES[datasetId] || datasetId;
+    handleDatasetSelect(realId, 'graph');
+  }, [handleDatasetSelect]);
   // Chat history & current conversation
   const [chatHistory, setChatHistory] = useState([]);
   const [currentConvId, setCurrentConvId] = useState(null);
