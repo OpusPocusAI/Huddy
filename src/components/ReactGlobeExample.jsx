@@ -237,7 +237,9 @@ function ReactGlobeExampleInner() {
   const handleNewChat = useCallback(() => {}, []);
   const openConversation = useCallback(() => {}, []);
   const handleChatSend = useCallback(async () => {}, []);
-  const handleSearch = useCallback(() => {}, []);
+  const handleSearch = useCallback(() => {
+    console.log('Search triggered with query:', datasetQuery);
+  }, [datasetQuery]);
   const handleProcessDataset = useCallback(() => {}, []);
   // Chat history & current conversation
   const [chatHistory, setChatHistory] = useState([]);
