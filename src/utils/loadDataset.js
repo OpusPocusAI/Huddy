@@ -68,31 +68,22 @@ export const loadDataset = async (datasetID) => {
       }
 
       // No world data - fetch for all countries instead
-      console.log(`Indicator ${datasetID} has no world data, fetching for selected countries...`);
+      console.log(`Indicator ${datasetID} has no world data, fetching for all countries...`);
 
-      // Instead of first 20 alphabetically, use a curated list of diverse major countries
-      // that are more likely to have comprehensive World Bank data
-      const priorityCountries = [
-        'US', 'CN', 'JP', 'DE', 'GB', 'FR', 'IN', 'BR', 'CA', 'AU',  // Major economies
-        'MX', 'ZA', 'EG', 'NG', 'KE', 'AR', 'TR', 'ID', 'TH', 'VN',  // Regional representatives
-        'SE', 'NO', 'DK', 'FI', 'NL', 'CH', 'AT', 'BE', 'SG', 'KR'   // High data availability
-      ];
+      // Use the new API function to fetch data for ALL countries in a single call
+      const { getIndicatorDataAllCountries } = await import('../services/worldBankApi');
+      const allCountriesData = await getIndicatorDataAllCountries(datasetID, 1960, 2024);
 
-      console.log(`Fetching ${datasetID} for ${priorityCountries.length} diverse countries:`, priorityCountries);
+      const data = allCountriesData.map(dp => ({
+        year: +dp.date,
+        entity: dp.country?.value || 'Unknown',
+        iso: dp.countryiso3code,
+        value: dp.value != null ? +dp.value : null
+      }));
 
-      const seriesMap = await getIndicatorData(priorityCountries, datasetID);
-      const data = priorityCountries.flatMap(code => (
-        (seriesMap[code] || []).map(dp => ({
-          year: +dp.date,
-          entity: dp.country.value,
-          iso: dp['countryiso3code'],
-          value: dp.value != null ? +dp.value : null
-        }))
-      ));
-
-      const clean = data.filter(d => !isNaN(d.year) && d.value != null)
+      const clean = data.filter(d => !isNaN(d.year) && d.value != null && d.entity !== 'Unknown')
                         .sort((a,b) => a.year - b.year);
-      console.log(`Indicator ${datasetID} loaded ${clean.length} entries from countries`);
+      console.log(`Indicator ${datasetID} loaded ${clean.length} entries from ${new Set(clean.map(d => d.entity)).size} countries`);
       return clean.length > 0 ? clean : [];
     } catch (err) {
       console.error(`Error loading indicator ${datasetID}:`, err);

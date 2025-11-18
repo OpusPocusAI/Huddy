@@ -43,6 +43,29 @@ async function getIndicators(q) {
 }
 
 /**
+ * Fetch time-series data for a given indicator across ALL countries in a single call.
+ * More efficient and comprehensive than fetching individual countries.
+ */
+async function getIndicatorDataAllCountries(indicator, start, end, lang = DEFAULTS.lang) {
+  const url = new URL(`${BASE_URL}/country/all/indicator/${indicator}`);
+  url.searchParams.set('format', DEFAULTS.format);
+  url.searchParams.set('per_page', '20000'); // Large limit to get all data
+  if (start !== undefined && end !== undefined) url.searchParams.set('date', `${start}:${end}`);
+  url.searchParams.set('lang', lang);
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const json = await res.json();
+    if (!Array.isArray(json) || json.length < 2) return [];
+    return json[1] || [];
+  } catch (err) {
+    console.warn(`Failed to fetch ${indicator} for all countries:`, err);
+    return [];
+  }
+}
+
+/**
  * Fetch time-series data for a given indicator & country list.
  * Fetches all countries in parallel for better performance.
  */
@@ -81,4 +104,4 @@ async function getIndicatorData(countryCodes, indicator, start, end, lang = DEFA
   return results;
 }
 
-export { getCountries, getIndicators, getIndicatorData };
+export { getCountries, getIndicators, getIndicatorData, getIndicatorDataAllCountries };
