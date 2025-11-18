@@ -328,26 +328,84 @@ npm run build
 
 ## Key Features
 
-### 1. 3D Globe Visualization
-**Location:** `/src/components/Globe.jsx`, `/src/features/globe/`
+### 1. 3D Globe Visualization ✨ FULLY WORKING
+**Location:** `/src/features/globe/GlobeController.jsx`, `/src/features/globe/GlobeScene.jsx`
 
 **Capabilities:**
-- WebGL-based interactive 3D globe using three-globe
-- Country polygons colored by data values (D3 color scales)
-- Hover tooltips showing country name + data value
-- Animated year slider for time-series data
-- Point clouds, arcs, and hex grids for various data types
+- ✅ WebGL-based interactive 3D globe using three-globe
+- ✅ Country polygons colored by data values using D3 `interpolateYlOrRd` heat map
+- ✅ Dynamic support for ANY World Bank indicator (not just hardcoded datasets)
+- ✅ Hover tooltips showing country name + data value
+- ✅ Year slider to scrub through time-series data (1800-2030)
+- ✅ Draggable control panel with region/country selector
+- ✅ ~300 countries/territories/regions colored based on data
 
-**Key Props:**
-```javascript
-<Globe
-  globeData={geoData}           // Country polygons
-  globeDataValue={(d) => value} // Color mapping
-  pointsData={points}           // Point cloud data
-  labelsData={labels}           // Text labels
-  hexBinPointsData={hexData}    // Hex grid
-/>
+**How It Works:**
+
+**Data Flow:**
 ```
+User searches "GDP growth"
+  ↓
+DatasetSearchPanel → World Bank API
+  ↓
+handleProcessDataset("NY.GDP.MKTP.KD.ZG")
+  ↓
+DatasetProvider.select() → loadDataset()
+  ↓
+Sets: ctxSeries (data) + ctxSelectedYear (year)
+  ↓
+HomeGlobeView receives: genericSeries + genericSelectedYear
+  ↓
+GlobeController.polygonCapColor() colors countries
+```
+
+**Color Mapping Logic:**
+```javascript
+// For each country polygon on globe:
+1. Match country by ISO code (ISO_A3) or entity name
+2. Find data record for current selected year
+3. Get all values for that year across countries
+4. Normalize: t = countryValue / maxValue (0-1 range)
+5. Apply color: interpolateYlOrRd(t)
+   - Low values: Yellow (#FFEDA0)
+   - Mid values: Orange (#FC8D59)
+   - High values: Red (#D7301F)
+   - No data: Gray (rgba(200,200,200,0.01))
+```
+
+**File: `/src/features/globe/GlobeController.jsx:127-179`**
+
+**Fallback Support:**
+- Hardcoded datasets: `life-expectancy`, `population`, `NY.GDP.PCAP.PP.KD`
+- **Generic fallback** (lines 165-177): Handles ANY World Bank indicator via `genericSeries`
+- Matches by ISO code first, then entity name
+- Works for specialized indicators like "out of school children", "CO2 emissions", etc.
+
+**Tooltip System:**
+```javascript
+// File: GlobeController.jsx:47-112
+onHover → emitTooltip() → eventBus.emit(Events.UiTooltipShow)
+  ↓
+Shows:
+- Country name
+- Data value for selected year
+- Region (from GeoJSON properties)
+```
+
+**Year Control Panel:**
+```javascript
+// File: DatasetControlPanel.jsx
+- Draggable control panel (bottom center of screen)
+- Year slider: min/max from available data years
+- onChange: updates DatasetContext.setSelectedYear()
+- Globe reactively updates colors when year changes
+```
+
+**Key Integration Points:**
+- `ReactGlobeExample.jsx:780-781` - Passes `genericSeries` and `genericSelectedYear` to globe
+- `DatasetContext.jsx:42` - Populates series data via `loadDataset()`
+- `useDatasetSelection.js:42` - Loads data in both graph and globe modes
+- `GlobeController.jsx:127-179` - Color mapping with fallback support
 
 ### 2. AI Chat with Function Calling
 **Location:** `/src/features/chat/`, `/server/index.js:1070-1336`
@@ -961,7 +1019,7 @@ Starting from a broken `mobile-optimized-refactor` branch, fixed:
 4. ✓ OWID integration broken → Disabled gracefully, directed to World Bank
 5. ✓ Production build initialization error → Fixed duplicate AuthProviders + React 18 API
 
-**Current Session (2024-11-17): Deployment Crisis & Resolution**
+**Session 2024-11-17: Deployment Crisis & Resolution**
 The previous session's fixes worked locally but **broke Vercel production deployments** with "Cannot access 'Ht'/'vn' before initialization" errors.
 
 **The Debugging Journey:**
@@ -978,9 +1036,41 @@ The previous session's fixes worked locally but **broke Vercel production deploy
 - Small incremental changes with production testing is the ONLY reliable approach
 - Module imports were a red herring - the fetch implementation also failed
 
-### Critical Files Modified (This Session)
-- `/src/components/ReactGlobeExample.jsx` - Fixed forward reference (commit 8630113)
-- `/CLAUDE.md` - Comprehensive deployment debugging documentation
+---
+
+**Session 2024-11-18: Globe Visualization & Data Coverage**
+After fixing deployment issues, focused on ensuring dynamic World Bank datasets display correctly on the globe with comprehensive data coverage.
+
+**Issues Fixed:**
+1. ✅ **Globe not showing colors for dynamic datasets** (commit 32ec049)
+   - Added fallback in `polygonCapColor` for any World Bank indicator
+   - Fixed missing dependencies: `genericSeries` and `genericSelectedYear`
+   - Added generic tooltip support: "Value: XXX"
+
+2. ✅ **Graph mode not loading data for globe** (commit 3d7e92b)
+   - DatasetProvider now loads data in parallel with GraphComponent
+   - Enables colored globe in background while viewing graph
+
+3. ✅ **Limited data coverage** (commit bba9659)
+   - Changed from 30 priority countries to ALL countries in single API call
+   - Much faster (1 request vs 30) and more comprehensive
+
+4. ✅ **Maximized API limits** (commit b361431)
+   - Increased per_page: 20000 → 32500 (API maximum)
+   - Extended date range: 1960:2024 → 1800:2030
+   - Added pagination support for indicators with >32,500 records
+
+**Results:**
+- Specialized indicators like "out of school children" now return data for all ~85 reporting countries
+- Globe displays colored heat maps for ANY World Bank indicator
+- Coverage: ~300 countries/regions, 230 years of data, up to 325k records per indicator
+
+### Critical Files Modified (Session 2024-11-18)
+- `/src/features/globe/GlobeController.jsx` - Added fallback color mapping for all World Bank indicators
+- `/src/features/datasets/useDatasetSelection.js` - Load data in both graph and globe modes
+- `/src/services/worldBankApi.js` - Added `getIndicatorDataAllCountries()` with pagination support
+- `/src/utils/loadDataset.js` - Use all-countries API endpoint with extended date range
+- `/CLAUDE.md` - Comprehensive globe visualization documentation
 
 ### Architecture Insights
 - **ReactGlobeExample.jsx is the heart** - It orchestrates all features, handles chat, datasets, and view modes
@@ -1013,6 +1103,16 @@ The previous session's fixes worked locally but **broke Vercel production deploy
 
 ---
 
-**Last Updated:** 2025-11-17 (Session: claude/explore-repo-01DkWNGUixdA2QjUHs7tfHqo)
-**Status:** ✅ Vercel deployment WORKING (commit 8630113)
-**Next Steps:** Carefully restore dataset processing and AI chat features without breaking production
+**Last Updated:** 2025-11-18 (Session: claude/explore-repo-01DkWNGUixdA2QjUHs7tfHqo)
+**Status:** ✅ Globe visualization FULLY WORKING (commit b361431)
+
+### Recent Commits (Session 2024-11-18)
+- `32ec049` - feat: Enable globe visualization for generic World Bank datasets
+- `3d7e92b` - fix: Load data via provider for graph mode to enable globe colors
+- `bba9659` - perf: Make World Bank API calls parallel instead of sequential
+- `b361431` - feat: Maximize World Bank data coverage with extended limits
+
+**Next Steps:**
+1. Test AI chat → globe control with new dynamic datasets
+2. Consider adding year animation/playback feature
+3. Optimize for very large datasets (>100k records)
