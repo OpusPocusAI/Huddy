@@ -37,7 +37,8 @@ export default function useDatasetSelection({
       setActiveDataset && setActiveDataset(ds);
       setShowGraph && setShowGraph(true);
       setShowGlobe && setShowGlobe(true);
-      setActiveGlobeDataset && setActiveGlobeDataset(null);
+      // Set activeGlobeDataset so year slider appears even in graph mode
+      setActiveGlobeDataset && setActiveGlobeDataset(datasetId);
       // Load data via provider so globe can show colors in background
       try { selectDatasetFromProvider && selectDatasetFromProvider(datasetId); } catch {}
     }

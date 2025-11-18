@@ -27,10 +27,23 @@ export default function DatasetSearchPanel({
         <ul className="max-h-32 overflow-auto text-sm text-white">
           {datasetSearchResults.map((ind) => (
             <li key={ind.id} className="flex justify-between items-center py-1 border-b border-gray-700">
-              <span>{ind.name}</span>
-              <button className="ml-2 px-2 py-1 bg-neon-blue rounded text-black text-xs" onClick={() => onProcessDataset(ind.id)}>
-                Process Dataset
-              </button>
+              <span className="flex-1">{ind.name}</span>
+              <div className="flex gap-1">
+                <button
+                  className="px-2 py-1 bg-neon-blue rounded text-black text-xs"
+                  onClick={() => onProcessDataset(ind.id, 'globe')}
+                  title="Show on 3D Globe"
+                >
+                  Globe
+                </button>
+                <button
+                  className="px-2 py-1 bg-neon-purple rounded text-black text-xs"
+                  onClick={() => onProcessDataset(ind.id, 'graph')}
+                  title="Show as Graph"
+                >
+                  Graph
+                </button>
+              </div>
             </li>
           ))}
         </ul>

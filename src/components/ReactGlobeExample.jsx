@@ -476,9 +476,9 @@ function ReactGlobeExampleInner() {
     'GDP_pc_PPP_2011': 'NY.GDP.PCAP.PP.KD',  // GDP per capita, PPP (constant 2011)
   };
 
-  const handleProcessDataset = useCallback((datasetId) => {
+  const handleProcessDataset = useCallback((datasetId, displayType = 'graph') => {
     const realId = INDICATOR_ALIASES[datasetId] || datasetId;
-    handleDatasetSelect(realId, 'graph');
+    handleDatasetSelect(realId, displayType);
   }, [handleDatasetSelect]);
 
   // Chat handlers - defined AFTER handleDatasetSelect to avoid forward references
