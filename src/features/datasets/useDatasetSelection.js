@@ -38,6 +38,8 @@ export default function useDatasetSelection({
       setShowGraph && setShowGraph(true);
       setShowGlobe && setShowGlobe(true);
       setActiveGlobeDataset && setActiveGlobeDataset(null);
+      // Load data via provider so globe can show colors in background
+      try { selectDatasetFromProvider && selectDatasetFromProvider(datasetId); } catch {}
     }
   }, [ctxAvailable, datasetSearchResults, selectDatasetFromProvider, setSelectedDataset, setIsGlobeReset, setActiveGlobeDataset, setShowGlobe, setShowGraph, setActiveDataset]);
 
