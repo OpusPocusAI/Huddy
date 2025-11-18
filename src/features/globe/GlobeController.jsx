@@ -84,6 +84,17 @@ export default function GlobeController({
         })()
       : null;
 
+    // Fallback: show generic dataset value if no specific dataset matched
+    const genericLine = !lifeExpLine && !populationLine && !gdpLine && series && genericSelectedYear
+      ? (() => {
+          const year = genericSelectedYear;
+          let rec = series.find(item => item.iso === country?.properties?.ISO_A3 && item.year === year);
+          if (!rec) rec = series.find(item => normalizeCountryName(item.entity) === lower && item.year === year);
+          const value = rec?.value != null ? new Intl.NumberFormat().format(rec.value) : null;
+          return value ? (<div className="text-sm text-gray-300">Value: {value}</div>) : null;
+        })()
+      : null;
+
     const region = country?.properties?.REGION_WB || country?.properties?.CONTINENT || 'N/A';
 
     const content = (
@@ -92,12 +103,13 @@ export default function GlobeController({
         {lifeExpLine}
         {populationLine}
         {gdpLine}
+        {genericLine}
         <div className="text-xs text-gray-400 mt-1">Region: {region}</div>
       </div>
     );
 
     eventBus.emit(Events.UiTooltipShow, { x: evt.clientX, y: evt.clientY, content });
-  }, [activeGlobeDataset, lifeExpData, populationData, gdpData, selectedGdpYear, selectedLifeExpYear, selectedPopulationYear]);
+  }, [activeGlobeDataset, lifeExpData, populationData, gdpData, selectedGdpYear, selectedLifeExpYear, selectedPopulationYear, genericSeries, genericSelectedYear]);
 
   const onHover = useCallback((country, evt) => {
     setHovered(country || null);
@@ -150,8 +162,21 @@ export default function GlobeController({
         return interpolateYlOrRd(t);
       }
     }
+    // Fallback: use genericSeries for any other dataset (e.g., World Bank indicators)
+    if (series && genericSelectedYear) {
+      const year = genericSelectedYear;
+      // Try matching by ISO code first, then by entity name
+      let rec = series.find(item => item.iso === d?.properties?.ISO_A3 && item.year === year);
+      if (!rec) rec = series.find(item => normalizeCountryName(item.entity) === name && item.year === year);
+      if (rec) {
+        const yearData = series.filter(item => item.year === year);
+        const max = Math.max(...yearData.map(item => item.value || 0));
+        const t = max > 0 ? (rec.value || 0) / max : 0;
+        return interpolateYlOrRd(t);
+      }
+    }
     return 'rgba(200,200,200,0.01)';
-  }, [warRoomMode, activeGlobeDataset, lifeExpData, populationData, gdpData, selectedLifeExpYear, selectedPopulationYear, selectedGdpYear]);
+  }, [warRoomMode, activeGlobeDataset, lifeExpData, populationData, gdpData, selectedLifeExpYear, selectedPopulationYear, selectedGdpYear, genericSeries, genericSelectedYear]);
 
   const polygonSideColor = useCallback((d) => (
     d === hovered ? 'rgba(57,255,20,0.15)' : 'rgba(150,150,150,0.01)'
