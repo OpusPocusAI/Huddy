@@ -61,7 +61,7 @@ export default function LeftSidebarContent(props) {
           onSearch={handleSearch}
           datasetSearchResults={datasetSearchResults}
           countryList={countryList}
-          onProcessDataset={(id) => props.handleProcessDataset(id)}
+          onProcessDataset={(id, displayType) => props.handleProcessDataset(id, displayType)}
           onSelectRegion={(id) => setSelectedRegion(id)}
         />
       )}
