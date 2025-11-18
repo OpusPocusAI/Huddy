@@ -49,7 +49,7 @@ async function getIndicators(q) {
 async function getIndicatorDataAllCountries(indicator, start, end, lang = DEFAULTS.lang) {
   const url = new URL(`${BASE_URL}/country/all/indicator/${indicator}`);
   url.searchParams.set('format', DEFAULTS.format);
-  url.searchParams.set('per_page', '20000'); // Large limit to get all data
+  url.searchParams.set('per_page', '32500'); // World Bank API maximum
   if (start !== undefined && end !== undefined) url.searchParams.set('date', `${start}:${end}`);
   url.searchParams.set('lang', lang);
 
@@ -58,7 +58,34 @@ async function getIndicatorDataAllCountries(indicator, start, end, lang = DEFAUL
     if (!res.ok) return [];
     const json = await res.json();
     if (!Array.isArray(json) || json.length < 2) return [];
-    return json[1] || [];
+
+    const metadata = json[0];
+    const data = json[1] || [];
+
+    // Check if there are more pages
+    if (metadata && metadata.pages > 1) {
+      console.log(`Indicator ${indicator} has ${metadata.total} records across ${metadata.pages} pages. Fetching all pages...`);
+
+      // Fetch remaining pages in parallel
+      const pagePromises = [];
+      for (let page = 2; page <= Math.min(metadata.pages, 10); page++) { // Limit to 10 pages max
+        const pageUrl = new URL(url);
+        pageUrl.searchParams.set('page', page.toString());
+        pagePromises.push(
+          fetch(pageUrl)
+            .then(r => r.ok ? r.json() : null)
+            .then(j => (j && Array.isArray(j) && j.length > 1) ? j[1] : [])
+            .catch(() => [])
+        );
+      }
+
+      const additionalPages = await Promise.all(pagePromises);
+      const allData = data.concat(...additionalPages.filter(p => p.length > 0));
+      console.log(`Fetched ${allData.length} total records from ${metadata.pages} pages`);
+      return allData;
+    }
+
+    return data;
   } catch (err) {
     console.warn(`Failed to fetch ${indicator} for all countries:`, err);
     return [];

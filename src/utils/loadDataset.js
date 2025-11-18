@@ -71,8 +71,9 @@ export const loadDataset = async (datasetID) => {
       console.log(`Indicator ${datasetID} has no world data, fetching for all countries...`);
 
       // Use the new API function to fetch data for ALL countries in a single call
+      // Extended date range to capture maximum historical data (some indicators go back to 1800)
       const { getIndicatorDataAllCountries } = await import('../services/worldBankApi');
-      const allCountriesData = await getIndicatorDataAllCountries(datasetID, 1960, 2024);
+      const allCountriesData = await getIndicatorDataAllCountries(datasetID, 1800, 2030);
 
       const data = allCountriesData.map(dp => ({
         year: +dp.date,
