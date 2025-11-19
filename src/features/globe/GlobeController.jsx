@@ -128,6 +128,17 @@ export default function GlobeController({
     if (warRoomMode) return 'rgba(255,255,0,0.2)';
     const name = normalizeCountryName(d?.properties?.ADMIN);
     const series = Array.isArray(genericSeries) && genericSeries.length ? genericSeries : null;
+
+    // Debug logging once when data is available
+    if (name === 'United States' && series && series.length > 0) {
+      console.log('🎨 Globe coloring active:', {
+        activeGlobeDataset,
+        seriesLength: series.length,
+        selectedYear: genericSelectedYear,
+        firstRecord: series[0]
+      });
+    }
+
     if (activeGlobeDataset === 'life-expectancy' && (lifeExpData || series) && (genericSelectedYear || selectedLifeExpYear)) {
       const year = genericSelectedYear ?? selectedLifeExpYear;
       const list = series || lifeExpData || [];
@@ -169,6 +180,10 @@ export default function GlobeController({
       let rec = series.find(item => item.iso === d?.properties?.ISO_A3 && item.year === year);
       if (!rec) rec = series.find(item => normalizeCountryName(item.entity) === name && item.year === year);
       if (rec) {
+        // Log fallback usage once
+        if (name === 'United States') {
+          console.log('✅ Fallback coloring used for dynamic dataset');
+        }
         const yearData = series.filter(item => item.year === year);
         const max = Math.max(...yearData.map(item => item.value || 0));
         const t = max > 0 ? (rec.value || 0) / max : 0;

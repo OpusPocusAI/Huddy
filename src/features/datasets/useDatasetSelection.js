@@ -20,6 +20,7 @@ export default function useDatasetSelection({
   setGlobeDataError,
 }) {
   const handleDatasetSelect = useCallback(async (datasetId, displayType = 'graph') => {
+    console.log('🔵 handleDatasetSelect called:', { datasetId, displayType });
     setSelectedDataset && setSelectedDataset(datasetId);
     let ds = (ctxAvailable || []).find(d => d.id === datasetId);
     if (!ds) {
@@ -27,6 +28,7 @@ export default function useDatasetSelection({
       ds = fromSearch ? { id: fromSearch.id, title: fromSearch.name } : { id: datasetId, title: datasetId };
     }
     if (displayType === 'globe') {
+      console.log('🌍 Globe mode: setting activeGlobeDataset =', datasetId);
       setIsGlobeReset && setIsGlobeReset(false);
       setActiveGlobeDataset && setActiveGlobeDataset(datasetId);
       try { selectDatasetFromProvider && selectDatasetFromProvider(datasetId); } catch {}
@@ -34,6 +36,7 @@ export default function useDatasetSelection({
       setShowGraph && setShowGraph(false);
       setActiveDataset && setActiveDataset(null);
     } else {
+      console.log('📊 Graph mode: setting activeDataset and activeGlobeDataset =', datasetId);
       setActiveDataset && setActiveDataset(ds);
       setShowGraph && setShowGraph(true);
       setShowGlobe && setShowGlobe(true);

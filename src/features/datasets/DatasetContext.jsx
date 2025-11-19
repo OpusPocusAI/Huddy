@@ -43,6 +43,15 @@ export function DatasetProvider({ children }) {
       const ys = Array.from(new Set(normalized.map(d => d.year))).sort((a,b)=>a-b);
       setYears(ys);
       setSelectedYear(ys.length ? ys[ys.length - 1] : null);
+
+      console.log('📊 Dataset loaded:', {
+        id,
+        records: normalized.length,
+        countries: new Set(normalized.map(d => d.entity)).size,
+        years: `${ys[0]}-${ys[ys.length - 1]}`,
+        defaultYear: ys[ys.length - 1]
+      });
+
       eventBus.emit(Events.DatasetLoaded, { id, series: normalized });
     } catch (e) {
       setError(e?.message || 'Failed to load dataset');
