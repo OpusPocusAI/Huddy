@@ -26,14 +26,20 @@ export default function DatasetSelector({ onSelectGlobe, onSelectGraph }) {
           <div className="flex gap-2 mt-2">
             <button
               className="flex-1 p-2 bg-neon-blue rounded text-black hover:bg-neon-blue/80 transition-colors"
-              onClick={() => selectedId && onSelectGraph?.(selectedId)}
+              onClick={() => {
+                console.log('📈 Show Graph clicked from DatasetSelector:', selectedId);
+                selectedId && onSelectGraph?.(selectedId);
+              }}
               disabled={!selectedId}
             >
               Show Graph
             </button>
             <button
               className="flex-1 p-2 bg-neon-purple text-black rounded hover:bg-neon-purple/80 transition-colors"
-              onClick={() => selectedId && onSelectGlobe?.(selectedId)}
+              onClick={() => {
+                console.log('🌍 Show on Globe clicked from DatasetSelector:', selectedId);
+                selectedId && onSelectGlobe?.(selectedId);
+              }}
               disabled={!selectedId}
             >
               Show on Globe

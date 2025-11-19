@@ -124,13 +124,14 @@ export const loadDataset = async (datasetID) => {
  */
 export const loadPopulationData = async () => {
   try {
+    console.log('📊 Loading population data from CSV...');
     // Fetch the CSV using the public URL (handled by CRA).
     const rawData = await csv(`${process.env.PUBLIC_URL}/data/population.csv`);
-    
+
     // Extract all unique entities (regions/countries)
     const entities = [...new Set(rawData.map(d => d.Entity))];
     console.log("Available entities:", entities.slice(0, 20));
-    
+
     // Map population data - include all entities, not just World
     const filteredData = rawData
       .map(d => ({
@@ -142,9 +143,10 @@ export const loadPopulationData = async () => {
       .filter(d => !isNaN(d.year) && !isNaN(d.population) && d.population > 0)
       .sort((a, b) => a.year - b.year);
 
+    console.log(`✅ Population data loaded: ${filteredData.length} records, ${entities.length} entities`);
     return filteredData;
   } catch (error) {
-    console.error('Error loading population data:', error);
+    console.error('❌ Error loading population data:', error);
     return null;
   }
 };
