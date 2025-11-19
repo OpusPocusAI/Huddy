@@ -222,7 +222,8 @@ function ReactGlobeExampleInner() {
     years: ctxYears,
     selectedYear: ctxSelectedYear,
     isLoading: ctxIsLoading,
-    select: selectDatasetFromProvider
+    select: selectDatasetFromProvider,
+    clear: clearDatasetProvider
   } = useDatasets();
 
   // Chat/Ideologram minimal placeholders to avoid runtime errors
@@ -453,6 +454,7 @@ function ReactGlobeExampleInner() {
     ctxAvailable,
     datasetSearchResults,
     selectDatasetFromProvider,
+    clearDatasetProvider,
     setSelectedDataset,
     setIsGlobeReset,
     setActiveGlobeDataset,

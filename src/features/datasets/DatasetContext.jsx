@@ -61,6 +61,15 @@ export function DatasetProvider({ children }) {
     } finally { setIsLoading(false); }
   }, []);
 
+  const clear = useCallback(() => {
+    console.log('🔄 Clearing dataset state');
+    setSelectedId('');
+    setSeries([]);
+    setYears([]);
+    setSelectedYear(null);
+    setError(null);
+  }, []);
+
   useEffect(() => { refreshAvailable(); }, [refreshAvailable]);
 
   const value = useMemo(() => ({
@@ -74,8 +83,9 @@ export function DatasetProvider({ children }) {
     isLoading,
     refreshAvailable,
     select,
-    setSelectedYear
-  }), [available, loadingAvailable, selectedId, series, years, selectedYear, error, refreshAvailable, select]);
+    setSelectedYear,
+    clear
+  }), [available, loadingAvailable, selectedId, series, years, selectedYear, error, isLoading, refreshAvailable, select, clear]);
 
   return (
     <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>

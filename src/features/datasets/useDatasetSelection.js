@@ -4,6 +4,7 @@ export default function useDatasetSelection({
   ctxAvailable,
   datasetSearchResults,
   selectDatasetFromProvider,
+  clearDatasetProvider,
   setSelectedDataset,
   setIsGlobeReset,
   setActiveGlobeDataset,
@@ -48,6 +49,12 @@ export default function useDatasetSelection({
   }, [ctxAvailable, datasetSearchResults, selectDatasetFromProvider, setSelectedDataset, setIsGlobeReset, setActiveGlobeDataset, setShowGlobe, setShowGraph, setActiveDataset]);
 
   const handleResetGlobe = useCallback(() => {
+    console.log('🔄 Reset Globe clicked');
+
+    // Clear DatasetProvider state (genericSeries, years, selectedYear)
+    clearDatasetProvider && clearDatasetProvider();
+
+    // Clear old hardcoded dataset state
     setActiveGlobeDataset && setActiveGlobeDataset(null);
     setPopulationData && setPopulationData([]);
     setLifeExpData && setLifeExpData([]);
@@ -58,6 +65,8 @@ export default function useDatasetSelection({
     setSelectedGdpYear && setSelectedGdpYear(null);
     setIsGlobeReset && setIsGlobeReset(true);
     setGlobeDataError && setGlobeDataError(null);
+
+    // Hide control panels
     try {
       const popControls = document.querySelector('#population-controls');
       const lifeControls = document.querySelector('#life-expectancy-controls');
@@ -66,7 +75,7 @@ export default function useDatasetSelection({
       if (lifeControls) lifeControls.style.display = 'none';
       if (gdpControls) gdpControls.style.display = 'none';
     } catch {}
-  }, [setActiveGlobeDataset, setPopulationData, setLifeExpData, setGdpData, setSelectedRegion, setSelectedPopulationYear, setSelectedLifeExpYear, setSelectedGdpYear, setIsGlobeReset, setGlobeDataError]);
+  }, [clearDatasetProvider, setActiveGlobeDataset, setPopulationData, setLifeExpData, setGdpData, setSelectedRegion, setSelectedPopulationYear, setSelectedLifeExpYear, setSelectedGdpYear, setIsGlobeReset, setGlobeDataError]);
 
   return { handleDatasetSelect, handleResetGlobe };
 }
